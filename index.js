@@ -3,7 +3,16 @@ const cors = require("cors");
 const { Pool } = require("pg");
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://miklosleingel-png.github.io",
+    "http://localhost:3000",
+    "http://localhost:5000",
+  ],
+  methods: ["GET","POST","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+}));
+app.options("*", cors());
 app.use(express.json());
 
 // Conexión a PostgreSQL (Railway inyecta DATABASE_URL automáticamente)
