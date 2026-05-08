@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pase de Lista CIPOLYS</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;font-size:14px}
+body{font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;background:#0f1117;color:#e8ecf4;min-height:100vh}
+button{-webkit-appearance:none;appearance:none;cursor:pointer;font-family:inherit}
+
+.hdr{background:#181c27;border-bottom:1px solid #2a2f42;padding:14px 16px 12px;position:-webkit-sticky;position:sticky;top:0;z-index:100}
+.hdr-top{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:space-between;justify-content:space-between;margin-bottom:12px}
+.logo{display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;gap:8px}
+.logo-ic{width:32px;height:32px;background:linear-gradient(135deg,#4f7fff,#7c3aed);border-radius:8px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;font-size:16px;flex-shrink:0}
+.logo h1{font-size:16px;font-weight:700}
+.logo p{font-size:11px;color:#6b7394}
+.clock{text-align:right}
+.clock .ct{font-size:15px;font-weight:700;color:#4f7fff}
+.clock .cd{font-size:10px;color:#6b7394}
+
+.srch{position:relative}
+.srch input{width:100%;background:#1e2333;border:1px solid #2a2f42;border-radius:10px;color:#e8ecf4;font-size:14px;padding:10px 14px 10px 38px;outline:none;-webkit-appearance:none}
+.srch input:focus{border-color:#4f7fff}
+.srch input::-webkit-input-placeholder{color:#6b7394}
+.srch-ic{position:absolute;left:12px;top:50%;-webkit-transform:translateY(-50%);transform:translateY(-50%);color:#6b7394;width:16px;height:16px}
+
+.stats{display:-webkit-flex;display:flex;gap:6px;padding:10px 14px;background:#181c27;border-bottom:1px solid #2a2f42;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.stat{-webkit-flex:1;flex:1;min-width:52px;background:#1e2333;border-radius:8px;padding:8px 4px;text-align:center}
+.stat .sv{font-size:19px;font-weight:700;line-height:1}
+.stat .sl{font-size:9px;color:#6b7394;margin-top:3px;text-transform:uppercase;letter-spacing:0.4px}
+.st .sv{color:#e8ecf4}.sa .sv{color:#22c55e}.sf .sv{color:#4f7fff}.sc .sv{color:#ef4444}.sn .sv{color:#d97706}
+
+.list{padding:8px 12px 120px}
+.slbl{font-size:11px;color:#6b7394;text-transform:uppercase;letter-spacing:0.8px;padding:8px 2px 6px;font-weight:500}
+
+.card{background:#181c27;border:1px solid #2a2f42;border-radius:10px;margin-bottom:7px;padding:11px 12px;border-left:3px solid #2a2f42;-webkit-transition:border-color 0.15s;transition:border-color 0.15s}
+.card.ca{border-left-color:#22c55e}
+.card.cf{border-left-color:#4f7fff}
+.card.cc{border-left-color:#ef4444}
+.card.cn{border-left-color:#d97706}
+.cname{font-size:13px;font-weight:500;margin-bottom:9px;line-height:1.3}
+.cbtns{display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:5px}
+
+.b{border-radius:7px;font-size:12px;font-weight:500;padding:6px 10px;background:#1e2333;color:#6b7394;border:1px solid #2a2f42;-webkit-transition:all 0.12s;transition:all 0.12s;line-height:1}
+.ba.on{background:rgba(34,197,94,0.15);color:#22c55e;border-color:#22c55e}
+.bf.on{background:rgba(79,127,255,0.15);color:#4f7fff;border-color:#4f7fff}
+.bc.on{background:rgba(239,68,68,0.15);color:#ef4444;border-color:#ef4444}
+.bn.on{background:rgba(217,119,6,0.15);color:#d97706;border-color:#d97706}
+
+.nores{text-align:center;padding:50px 20px;color:#6b7394;font-size:14px}
+
+.ftr{position:fixed;bottom:0;left:0;right:0;background:#181c27;border-top:1px solid #2a2f42;padding:10px 14px;display:-webkit-flex;display:flex;gap:8px}
+.btn-pdf{-webkit-flex:1;flex:1;background:linear-gradient(135deg,#4f7fff,#7c3aed);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;padding:13px;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center;gap:7px}
+.btn-clr{background:#1e2333;color:#6b7394;border:1px solid #2a2f42;border-radius:10px;font-size:13px;padding:13px 14px}
+
+.modal-bg{display:none;position:fixed;inset:0;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:200;-webkit-align-items:center;align-items:center;-webkit-justify-content:center;justify-content:center}
+.modal-bg.open{display:-webkit-flex;display:flex}
+.modal{background:#181c27;border:1px solid #2a2f42;border-radius:14px;padding:22px;width:90%;max-width:380px}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:6px}
+.modal p{color:#6b7394;font-size:12px;margin-bottom:16px}
+.modal input{width:100%;background:#1e2333;border:1px solid #2a2f42;border-radius:9px;color:#e8ecf4;font-family:inherit;font-size:14px;padding:11px 13px;outline:none;-webkit-appearance:none;margin-bottom:14px}
+.modal input:focus{border-color:#4f7fff}
+.modal-btns{display:-webkit-flex;display:flex;gap:8px}
+.m-cancel{-webkit-flex:1;flex:1;background:#1e2333;color:#6b7394;border:1px solid #2a2f42;border-radius:9px;font-family:inherit;font-size:14px;padding:11px}
+.m-gen{-webkit-flex:2;flex:2;background:linear-gradient(135deg,#4f7fff,#7c3aed);color:#fff;border:none;border-radius:9px;font-family:inherit;font-size:14px;font-weight:600;padding:11px}
+
+.toast{position:fixed;bottom:80px;left:50%;-webkit-transform:translateX(-50%) translateY(16px);transform:translateX(-50%) translateY(16px);background:#22c55e;color:#fff;font-size:13px;font-weight:500;padding:9px 18px;border-radius:30px;opacity:0;-webkit-transition:all 0.3s;transition:all 0.3s;z-index:300;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;-webkit-transform:translateX(-50%) translateY(0);transform:translateX(-50%) translateY(0)}
+
+/* ── PRINT / PDF ── */
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  .hdr,.stats,.ftr,.modal-bg,.toast{display:none!important}
+  .list{padding:0;padding-bottom:0}
+  .card{border:none;border-left:none;border-bottom:1px solid #ddd;border-radius:0;margin:0;padding:5px 2px;background:#fff;page-break-inside:avoid}
+  .card:nth-child(even){background:#f5f5f5}
+  .cname{font-size:10pt;color:#000;margin-bottom:0}
+  .cbtns{display:none}
+  .slbl{color:#555;font-size:8pt;border-bottom:2px solid #333;margin-bottom:4px;padding-bottom:2px}
+  .nores{display:none}
+  #printHeader{display:block!important}
+  #printHeader h1{font-size:16pt;font-weight:bold;margin-bottom:2px}
+  #printHeader p{font-size:9pt;color:#555;margin-bottom:12px}
+  .print-section{margin-bottom:16px}
+  .print-section h3{font-size:10pt;font-weight:bold;border-bottom:1px solid #999;padding-bottom:2px;margin-bottom:4px}
+}
+#printHeader{display:none}
+</style>
+</head>
+<body>
+
+<div id="printHeader">
+  <h1>CIPOLYS &mdash; Pase de Lista</h1>
+  <p id="phInfo"></p>
+</div>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="logo">
+      <div class="logo-ic">&#128203;</div>
+      <div>
+        <h1>Pase de Lista</h1>
+        <p>CIPOLYS &middot; Sem&aacute;foro</p>
+      </div>
+    </div>
+    <div class="clock">
+      <div class="ct" id="ct">--:--:--</div>
+      <div class="cd" id="cd">---</div>
+    </div>
+  </div>
+  <div class="srch">
+    <svg class="srch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="srch" placeholder="Buscar nombre..." oninput="buscar()">
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat st"><div class="sv" id="st">0</div><div class="sl">Total</div></div>
+  <div class="stat sa"><div class="sv" id="sa">0</div><div class="sl">Asistentes</div></div>
+  <div class="stat sf"><div class="sv" id="sf">0</div><div class="sl">A favor</div></div>
+  <div class="stat sc"><div class="sv" id="sc">0</div><div class="sl">En contra</div></div>
+  <div class="stat sn"><div class="sv" id="sn">0</div><div class="sl">Neutro</div></div>
+</div>
+
+<div class="list" id="lista"></div>
+
+<div class="ftr">
+  <button class="btn-clr" onclick="limpiar()">&#128465;</button>
+  <button class="btn-pdf" onclick="abrirModal()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    Generar Reporte PDF
+  </button>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h2>Generar Reporte</h2>
+    <p>T&iacute;tulo del reporte (opcional, se genera autom&aacute;ticamente)</p>
+    <input type="text" id="rtitle" placeholder="Ej. Sesi&oacute;n mayo 2025">
+    <div class="modal-btns">
+      <button class="m-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="m-gen" onclick="genPDF()">Generar PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var NAMES = ["ACEVEDO CISNEROS CIRO ADRIAN", "AGUILA LUNA CATALINO", "AGUILAR BALDERAS LIDIA", "AGUILAR DAZA MELQUIADES GREGORIO", "AGUILAR PEREZ MIRZA", "AGUILAR PEREZ MIRZA", "AGUILERA CARCAMO EVA", "ALDECO PAZ JULIO FERNANDO", "ALVAREZ PEREZ MARCELA", "AMADOR VAZQUEZ SAMUEL", "AMARO ZAHUANTITLA GUSTAVO", "ARELLANES JIMENEZ PAULINO ERNESTO", "ARGUELLES GOMEZ MARIA MARGARITA", "ARROYO GARCIA ISRAEL", "BALBUENA AGISS ZENY", "BALLEN GUACHETA ELIZABETH", "BARRIENTOS OVIEDO HOBART DANIEL", "BARRIOS HERNANDEZ BEATRIZ", "BAUTISTA ALVAREZ JAVIER", "BECERRA GARCIA LILIA", "CALDERON MORILLON OSCAR", "CALVILLO BARRIOS JUAN", "CAMPOS LOPEZ XOCHITL PATRICIA", "CANALES DE LA FUENTE EMMA ALICIA", "CANO ROBLES ALFONSO", "CANSINO ORTIZ CESAR RICARDO", "CARRILLO CORNEJO RODOLFO", "CASTAÑEDA ARAUJO PABLO", "CASTAÑEDA TENORIO ENRIQUE", "CEPEDA ARELLANO YESSIKA MABEL", "CEREZO MORALES NORMA BERTHA", "CONTRERAS PERALTA JORGE", "COUTIÑO OSORIO PATRICIA FABIOLA", "CRIVELLI MINUTTI EDUARDO", "CRUZ CARVAJAL CRISTINA", "CRUZ CHAZARI GONZALO", "CUAHUTLE ZAMORA YOBANNI", "DAVILA GARCIA DANIELA", "DE LA FUENTE MORALES CLAUDIA GUADALUPE", "DIAZ VAZQUEZ ROGELIO", "DOMINGUEZ ROMERO MARTHA", "ECHEGOLLEN GUZMAN MAYLETH", "ELIAS MIRANDA VICTOR MANUEL", "EVANGELINA M. CORONA", "FLORES FLORES ERIKA", "FLORES VAZQUEZ TANIA BELINDA", "GARCIA GARCIA EDGAR PASCUAL", "GARCIA GOMEZ JAZMIN", "GARCIA HERNANDEZ ERASMO", "GARCIA MARTINEZ HERON", "GARZON SERRANO JOEL DAVID", "GERONIMO CASTILLO FABIAN ALEJANDRO", "GONZALEZ PEREYRA ROCIO", "GONZALEZ VELAZQUEZ JUAN PABLO", "HERNANDEZ DE GANTE MA. ALICIA", "HERNANDEZ MAIMONE MANUEL ALEJANDRO", "HERNANDEZ MANZANILLA FATIMA", "HERNANDEZ SALAZAR JULIAN", "JARAMILLO TORRES ANGEL", "JIMENEZ MORALES OSCAR ANTONIO", "LABARREDA GONZALEZ JORGE", "LOPEZ ANGEL GUSTAVO", "LOPEZ GARCIA CLAUDIA", "MACIP RIOS RICARDO FRANCISCO", "MANTILLA GALVEZ DIANA KARINA", "MARQUEZ AMADO ROSA ISABEL", "MARTIN GARCIA ALESANDRA", "MAYORGA GALLARDO OMAR EDUARDO", "MEJIA ROSAS CRISTOPHER", "MENDOZA LOPEZ KAREN", "MIQUEL HERNANDEZ MONTSERRAT", "MONDRAGON TOLEDO GABRIEL", "MORALES MORENO ISIDRO", "MORENO ROSANO MARIA PATRICIA", "MORENO VELADOR OCTAVIO HUMBERTO", "MUNGUIA SALAZAR ALEX", "NAVA GALICIA MARTHA CONSUELO", "NETZAHUALCOYOTZI LUNA RAUL", "OCHOA BILBAO LUIS", "OCMAN AZUETA CLAUDIA ANAIT", "OLIVER TENORIO ALFONSO WILLEBALDO", "ORTEGA RAMIREZ ADRIANA SLETZA", "PEREA SANCHEZ CARLOS GILBERTO", "PEREZ DIAZ MARISOL", "PEREZ GOMEZ JOSE ALBERTO", "PONCE CARRILLO OMAR ANTONIO", "PRADO LALLANDE JUAN PABLO", "QUIROZ ALVARADO REBECA", "RAMIREZ HERNANDEZ FELIPE ANTONIO", "RAMIREZ NECOECHEA JOSE RAUL", "RAMIREZ TORRES JULIETA", "REGALADO MUJICA ROGELIO", "REYES RONQUILLO MARIA DEL CORAL", "RIVERA ARIZA GUILLERMO", "RIVERA GONZALEZ HERVEY", "ROCHA MANILLA RAMON CARLOS", "RODRIGUEZ AÑUEZ MYRNA", "RODRIGUEZ ORTIZ GUILLERMO ALBERTO", "RODRIGUEZ SUAREZ PEDRO MANUEL", "ROMERO ORDUÑA LINDA MARGARITA", "RONCAL VATTUONE ELSA XIMENA", "SANCHEZ ESPINOZA FRANCISCO", "SANCHEZ GAVI JOSE LUIS", "SANCHEZ JIMENEZ JOSE GUADALUPE", "SANCHEZ JUAREZ JORGE RENE", "SANCHEZ TORRES RODRIGO", "SANTIBAÑEZ ANALCO MONSERRATH", "SEGURA LANDA NORMA ADA", "SERAFIN CASTRO ALEXEI DANIEL", "TALAVERA SARDANETA EDUARDO", "TAPIA MARCHINA STEFANIA", "TEUTLE ORTEGA BERENICE HORTENSIA", "TOBON RAMIREZ MARIA DE JESUS OFELIA", "TORRES VILLEGAS LAURA ELIZABETH", "TREJO SANTOS ENRIQUE", "VAZQUEZ DE LARA CISNEROS JOSE RAUL", "VELAZQUEZ CABALLERO DIEGO MARTIN", "VERGARA ORTEGA BLANCA EDITH", "VIDAL URRUTIA JORGE ALBERTO"];
+var estado = {};
+for (var i = 0; i < NAMES.length; i++) {
+  estado[i] = {a: false, v: null};
+}
+
+function reloj() {
+  var d = new Date();
+  var h = d.getHours(); var m = d.getMinutes(); var s = d.getSeconds();
+  document.getElementById('ct').innerHTML =
+    (h<10?'0'+h:h)+':'+(m<10?'0'+m:m)+':'+(s<10?'0'+s:s);
+  var dias = ['dom','lun','mar','mié','jue','vie','sáb'];
+  var meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  document.getElementById('cd').innerHTML =
+    dias[d.getDay()]+' '+d.getDate()+' '+meses[d.getMonth()]+' '+d.getFullYear();
+}
+setInterval(reloj, 1000);
+reloj();
+
+function stats() {
+  var a=0, f=0, c=0, n=0;
+  for (var i=0; i<NAMES.length; i++) {
+    var e = estado[i];
+    if (e.a) a++;
+    if (e.v==='f') f++;
+    if (e.v==='c') c++;
+    if (e.v==='n') n++;
+  }
+  document.getElementById('st').innerHTML = NAMES.length;
+  document.getElementById('sa').innerHTML = a;
+  document.getElementById('sf').innerHTML = f;
+  document.getElementById('sc').innerHTML = c;
+  document.getElementById('sn').innerHTML = n;
+}
+
+function tog(i, campo) {
+  var e = estado[i];
+  if (campo === 'a') {
+    e.a = !e.a;
+    if (!e.a) e.v = null;
+  } else {
+    e.v = (e.v === campo) ? null : campo;
+    if (e.v) e.a = true;
+  }
+  stats();
+  actualizarCard(i);
+}
+
+function actualizarCard(i) {
+  var el = document.getElementById('c'+i);
+  if (!el) return;
+  var e = estado[i];
+  el.className = 'card' + (e.a ? (e.v ? ' c'+e.v : ' ca') : '');
+  var btns = el.getElementsByClassName('b');
+  btns[0].className = 'b ba' + (e.a ? ' on' : '');
+  btns[0].innerHTML = e.a ? '&#10003; Presente' : 'Asistencia';
+  btns[1].className = 'b bf' + (e.v==='f' ? ' on' : '');
+  btns[2].className = 'b bc' + (e.v==='c' ? ' on' : '');
+  btns[3].className = 'b bn' + (e.v==='n' ? ' on' : '');
+}
+
+function buscar() {
+  var q = document.getElementById('srch').value.toLowerCase();
+  var cards = document.getElementsByClassName('card');
+  var lbl = document.getElementById('lbl');
+  var vis = 0;
+  for (var i = 0; i < cards.length; i++) {
+    var nombre = NAMES[parseInt(cards[i].id.substring(1))].toLowerCase();
+    if (nombre.indexOf(q) !== -1) {
+      cards[i].style.display = '';
+      vis++;
+    } else {
+      cards[i].style.display = 'none';
+    }
+  }
+  if (lbl) lbl.innerHTML = vis + ' persona' + (vis !== 1 ? 's' : '');
+}
+
+function limpiar() {
+  if (!confirm('¿Limpiar toda la lista?')) return;
+  for (var i=0; i<NAMES.length; i++) {
+    estado[i] = {a:false, v:null};
+    actualizarCard(i);
+  }
+  stats();
+  toast('Lista limpiada');
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.innerHTML = msg;
+  t.className = 'toast show';
+  setTimeout(function(){ t.className = 'toast'; }, 2600);
+}
+
+function abrirModal() {
+  var d = new Date();
+  var h = d.getHours(); var m = d.getMinutes();
+  document.getElementById('rtitle').value = 'Reporte ' + (h<10?'0'+h:h) + ':' + (m<10?'0'+m:m);
+  document.getElementById('modal').className = 'modal-bg open';
+}
+function cerrarModal() {
+  document.getElementById('modal').className = 'modal-bg';
+}
+
+function genPDF() {
+  var titulo = document.getElementById('rtitle').value || 'Reporte';
+  cerrarModal();
+  var d = new Date();
+  var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var fechaStr = dias[d.getDay()]+', '+d.getDate()+' de '+meses[d.getMonth()]+' de '+d.getFullYear();
+  var h = d.getHours(); var m = d.getMinutes(); var s = d.getSeconds();
+  var horaStr = (h<10?'0'+h:h)+':'+(m<10?'0'+m:m)+':'+(s<10?'0'+s:s);
+
+  document.getElementById('phInfo').innerHTML = titulo+' &nbsp;&middot;&nbsp; '+fechaStr+' &nbsp;&middot;&nbsp; '+horaStr;
+
+  var lista = document.getElementById('lista');
+  lista.innerHTML = '';
+
+  var asist=[], afavor=[], contra=[], neutro=[], ausentes=[];
+  for (var i=0; i<NAMES.length; i++) {
+    var e = estado[i];
+    if (e.a) asist.push(NAMES[i]);
+    if (e.v==='f') afavor.push(NAMES[i]);
+    if (e.v==='c') contra.push(NAMES[i]);
+    if (e.v==='n') neutro.push(NAMES[i]);
+    if (!e.a) ausentes.push(NAMES[i]);
+  }
+
+  function seccion(titulo, arr, cls) {
+    if (!arr.length) return '';
+    var h = '<div class="print-section"><h3>'+titulo+' ('+arr.length+')</h3>';
+    for (var i=0; i<arr.length; i++) {
+      h += '<div class="card" style="background:'+(i%2?'#fff':'#f5f5f5')+'"><div class="cname" style="color:#000;margin:0;padding:2px 0">'+arr[i]+'</div></div>';
+    }
+    return h+'</div>';
+  }
+
+  lista.innerHTML =
+    seccion('ASISTENTES', asist) +
+    seccion('A FAVOR', afavor) +
+    seccion('EN CONTRA', contra) +
+    seccion('NEUTRO', neutro) +
+    seccion('AUSENTES', ausentes);
+
+  document.getElementById('srch').value = '';
+
+  setTimeout(function() {
+    window.print();
+    setTimeout(function() {
+      renderTodos();
+      toast('Reporte generado');
+    }, 500);
+  }, 100);
+}
+
+function renderTodos() {
+  var html = '<div class="slbl" id="lbl">'+NAMES.length+' personas</div>';
+  for (var i=0; i<NAMES.length; i++) {
+    var e = estado[i];
+    var cc = e.a ? (e.v ? ' c'+e.v : ' ca') : '';
+    html += '<div class="card'+cc+'" id="c'+i+'">'
+      +'<div class="cname">'+NAMES[i]+'</div>'
+      +'<div class="cbtns">'
+      +'<button class="b ba'+(e.a?' on':'')+'" onclick="tog('+i+',\'a\')">'+(e.a?'&#10003; Presente':'Asistencia')+'</button>'
+      +'<button class="b bf'+(e.v==='f'?' on':'')+'" onclick="tog('+i+',\'f\')">A favor</button>'
+      +'<button class="b bc'+(e.v==='c'?' on':'')+'" onclick="tog('+i+',\'c\')">En contra</button>'
+      +'<button class="b bn'+(e.v==='n'?' on':'')+'" onclick="tog('+i+',\'n\')">Neutro</button>'
+      +'</div></div>';
+  }
+  document.getElementById('lista').innerHTML = html;
+  stats();
+}
+
+renderTodos();
+stats();
+</script>
+</body>
+</html>
