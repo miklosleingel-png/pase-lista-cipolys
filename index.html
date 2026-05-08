@@ -16,14 +16,14 @@ select option { background:#1e2333; color:#e8ecf4 }
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useCallback } = React;
+
+const API_URL = "https://pase-lista-cipolys-production.up.railway.app";
+
 
 
 const SECTORES = ["No académico","Posgrado","Ciencias Políticas","Relaciones Internacionales","Sociología","No identificado"];
 const SECTOR_COLORS = {"No académico":"#6366f1","Posgrado":"#0ea5e9","Ciencias Políticas":"#22c55e","Relaciones Internacionales":"#f59e0b","Sociología":"#ec4899","No identificado":"#94a3b8"};
-const INIT_DATA = [{"name":"AGUILA LUNA CATALINO","sector":"No académico"},{"name":"AGUILAR PEREZ MIRZA","sector":"No académico"},{"name":"AGUILERA CARCAMO EVA","sector":"No académico"},{"name":"BAUTISTA ALVAREZ JAVIER","sector":"No académico"},{"name":"BECERRA GARCIA LILIA","sector":"No académico"},{"name":"CRUZ CHAZARI GONZALO","sector":"No académico"},{"name":"DIAZ VAZQUEZ ROGELIO","sector":"No académico"},{"name":"DOMINGUEZ ROMERO MARTHA","sector":"No académico"},{"name":"GONZALEZ VELAZQUEZ JUAN PABLO","sector":"No académico"},{"name":"MAYORGA GALLARDO OMAR EDUARDO","sector":"No académico"},{"name":"PEREA SANCHEZ CARLOS GILBERTO","sector":"No académico"},{"name":"QUIROZ ALVARADO REBECA","sector":"No académico"},{"name":"TEUTLE ORTEGA BERENICE HORTENSIA","sector":"No académico"},{"name":"AGUILAR BALDERAS LIDIA","sector":"Posgrado"},{"name":"ARELLANES JIMENEZ PAULINO ERNESTO","sector":"Posgrado"},{"name":"ARROYO GARCIA ISRAEL","sector":"Posgrado"},{"name":"CANO ROBLES ALFONSO","sector":"Posgrado"},{"name":"CANSINO ORTIZ CESAR RICARDO","sector":"Posgrado"},{"name":"COUTIÑO OSORIO PATRICIA FABIOLA","sector":"Posgrado"},{"name":"GERONIMO CASTILLO FABIAN ALEJANDRO","sector":"Posgrado"},{"name":"MORENO VELADOR OCTAVIO HUMBERTO","sector":"Posgrado"},{"name":"PEREZ DIAZ MARISOL","sector":"Posgrado"},{"name":"SANCHEZ ESPINOZA FRANCISCO","sector":"Posgrado"},{"name":"AGUILAR DAZA MELQUIADES GREGORIO","sector":"Ciencias Políticas"},{"name":"ALDECO PAZ JULIO FERNANDO","sector":"Ciencias Políticas"},{"name":"AMARO ZAHUANTITLA GUSTAVO","sector":"Ciencias Políticas"},{"name":"ARGUELLES GOMEZ MARIA MARGARITA","sector":"Ciencias Políticas"},{"name":"BALBUENA AGISS ZENY","sector":"Ciencias Políticas"},{"name":"BARRIOS HERNANDEZ BEATRIZ","sector":"Ciencias Políticas"},{"name":"CALVILLO BARRIOS JUAN","sector":"Ciencias Políticas"},{"name":"CAMPOS LOPEZ XOCHITL PATRICIA","sector":"Ciencias Políticas"},{"name":"CANALES DE LA FUENTE EMMA ALICIA","sector":"Ciencias Políticas"},{"name":"CARRILLO CORNEJO RODOLFO","sector":"Ciencias Políticas"},{"name":"CASTAÑEDA ARAUJO PABLO","sector":"Ciencias Políticas"},{"name":"CASTAÑEDA TENORIO ENRIQUE","sector":"Ciencias Políticas"},{"name":"CEPEDA ARELLANO YESSIKA MABEL","sector":"Ciencias Políticas"},{"name":"DE LA FUENTE MORALES CLAUDIA GUADALUPE","sector":"Ciencias Políticas"},{"name":"FLORES FLORES ERIKA","sector":"Ciencias Políticas"},{"name":"GARCIA GARCIA EDGAR PASCUAL","sector":"Ciencias Políticas"},{"name":"GARCIA HERNANDEZ ERASMO","sector":"Ciencias Políticas"},{"name":"HERNANDEZ MAIMONE MANUEL ALEJANDRO","sector":"Ciencias Políticas"},{"name":"HERNANDEZ MANZANILLA FATIMA","sector":"Ciencias Políticas"},{"name":"HERNANDEZ SALAZAR JULIAN","sector":"Ciencias Políticas"},{"name":"JIMENEZ MORALES OSCAR ANTONIO","sector":"Ciencias Políticas"},{"name":"LOPEZ GARCIA CLAUDIA","sector":"Ciencias Políticas"},{"name":"MARTIN GARCIA ALESANDRA","sector":"Ciencias Políticas"},{"name":"MEJIA ROSAS CRISTOPHER","sector":"Ciencias Políticas"},{"name":"MIQUEL HERNANDEZ MONTSERRAT","sector":"Ciencias Políticas"},{"name":"MUNGUIA SALAZAR ALEX","sector":"Ciencias Políticas"},{"name":"OLIVER TENORIO ALFONSO WILLEBALDO","sector":"Ciencias Políticas"},{"name":"PONCE CARRILLO OMAR ANTONIO","sector":"Ciencias Políticas"},{"name":"REYES RONQUILLO MARIA DEL CORAL","sector":"Ciencias Políticas"},{"name":"RIVERA GONZALEZ HERVEY","sector":"Ciencias Políticas"},{"name":"SANCHEZ JIMENEZ JOSE GUADALUPE","sector":"Ciencias Políticas"},{"name":"SANCHEZ JUAREZ JORGE RENE","sector":"Ciencias Políticas"},{"name":"SERAFIN CASTRO ALEXEI DANIEL","sector":"Ciencias Políticas"},{"name":"TOBON RAMIREZ MARIA DE JESUS OFELIA","sector":"Ciencias Políticas"},{"name":"TORRES VILLEGAS LAURA ELIZABETH","sector":"Ciencias Políticas"},{"name":"VELAZQUEZ CABALLERO DIEGO MARTIN","sector":"Ciencias Políticas"},{"name":"VIDAL URRUTIA JORGE ALBERTO","sector":"Ciencias Políticas"},{"name":"ACEVEDO CISNEROS CIRO ADRIAN","sector":"Relaciones Internacionales"},{"name":"ALVAREZ PEREZ MARCELA","sector":"Relaciones Internacionales"},{"name":"AMADOR VAZQUEZ SAMUEL","sector":"Relaciones Internacionales"},{"name":"BARRIENTOS OVIEDO HOBART DANIEL","sector":"Relaciones Internacionales"},{"name":"CEREZO MORALES NORMA BERTHA","sector":"Relaciones Internacionales"},{"name":"CONTRERAS PERALTA JORGE","sector":"Relaciones Internacionales"},{"name":"CRIVELLI MINUTTI EDUARDO","sector":"Relaciones Internacionales"},{"name":"CRUZ CARVAJAL CRISTINA","sector":"Relaciones Internacionales"},{"name":"CUAHUTLE ZAMORA YOBANNI","sector":"Relaciones Internacionales"},{"name":"ELIAS MIRANDA VICTOR MANUEL","sector":"Relaciones Internacionales"},{"name":"FLORES VAZQUEZ TANIA BELINDA","sector":"Relaciones Internacionales"},{"name":"GARCIA MARTINEZ HERON","sector":"Relaciones Internacionales"},{"name":"GONZALEZ PEREYRA ROCIO","sector":"Relaciones Internacionales"},{"name":"LABARREDA GONZALEZ JORGE","sector":"Relaciones Internacionales"},{"name":"MANTILLA GALVEZ DIANA KARINA","sector":"Relaciones Internacionales"},{"name":"MARQUEZ AMADO ROSA ISABEL","sector":"Relaciones Internacionales"},{"name":"MORALES MORENO ISIDRO","sector":"Relaciones Internacionales"},{"name":"MORENO ROSANO MARIA PATRICIA","sector":"Relaciones Internacionales"},{"name":"NAVA GALICIA MARTHA CONSUELO","sector":"Relaciones Internacionales"},{"name":"NETZAHUALCOYOTZI LUNA RAUL","sector":"Relaciones Internacionales"},{"name":"OCHOA BILBAO LUIS","sector":"Relaciones Internacionales"},{"name":"OCMAN AZUETA CLAUDIA ANAIT","sector":"Relaciones Internacionales"},{"name":"ORTEGA RAMIREZ ADRIANA SLETZA","sector":"Relaciones Internacionales"},{"name":"PEREZ GOMEZ JOSE ALBERTO","sector":"Relaciones Internacionales"},{"name":"PRADO LALLANDE JUAN PABLO","sector":"Relaciones Internacionales"},{"name":"RAMIREZ NECOECHEA JOSE RAUL","sector":"Relaciones Internacionales"},{"name":"RAMIREZ TORRES JULIETA","sector":"Relaciones Internacionales"},{"name":"REGALADO MUJICA ROGELIO","sector":"Relaciones Internacionales"},{"name":"RODRIGUEZ AÑUEZ MYRNA","sector":"Relaciones Internacionales"},{"name":"RODRIGUEZ ORTIZ GUILLERMO ALBERTO","sector":"Relaciones Internacionales"},{"name":"RODRIGUEZ SUAREZ PEDRO MANUEL","sector":"Relaciones Internacionales"},{"name":"ROMERO ORDUÑA LINDA MARGARITA","sector":"Relaciones Internacionales"},{"name":"RONCAL VATTUONE ELSA XIMENA","sector":"Relaciones Internacionales"},{"name":"SANCHEZ GAVI JOSE LUIS","sector":"Relaciones Internacionales"},{"name":"SEGURA LANDA NORMA ADA","sector":"Relaciones Internacionales"},{"name":"TALAVERA SARDANETA EDUARDO","sector":"Relaciones Internacionales"},{"name":"TAPIA MARCHINA STEFANIA","sector":"Relaciones Internacionales"},{"name":"VAZQUEZ DE LARA CISNEROS JOSE RAUL","sector":"Relaciones Internacionales"},{"name":"VERGARA ORTEGA BLANCA EDITH","sector":"Relaciones Internacionales"},{"name":"AGUILAR PEREZ MIRZA","sector":"Sociología"},{"name":"BALLEN GUACHETA ELIZABETH","sector":"Sociología"},{"name":"CALDERON MORILLON OSCAR","sector":"Sociología"},{"name":"DAVILA GARCIA DANIELA","sector":"Sociología"},{"name":"ECHEGOLLEN GUZMAN MAYLETH","sector":"Sociología"},{"name":"GARZON SERRANO JOEL DAVID","sector":"Sociología"},{"name":"HERNANDEZ DE GANTE MA. ALICIA","sector":"Sociología"},{"name":"LOPEZ ANGEL GUSTAVO","sector":"Sociología"},{"name":"MACIP RIOS RICARDO FRANCISCO","sector":"Sociología"},{"name":"MENDOZA LOPEZ KAREN","sector":"Sociología"},{"name":"RAMIREZ HERNANDEZ FELIPE ANTONIO","sector":"Sociología"},{"name":"RIVERA ARIZA GUILLERMO","sector":"Sociología"},{"name":"ROCHA MANILLA RAMON CARLOS","sector":"Sociología"},{"name":"SANCHEZ TORRES RODRIGO","sector":"Sociología"},{"name":"SANTIBAÑEZ ANALCO MONSERRATH","sector":"Sociología"},{"name":"TREJO SANTOS ENRIQUE","sector":"Sociología"},{"name":"JARAMILLO TORRES ANGEL","sector":"No identificado"},{"name":"MONDRAGON TOLEDO GABRIEL","sector":"No identificado"},{"name":"EVANGELINA M. CORONA","sector":"No identificado"}];
-
-const initPersonas = () => INIT_DATA.map((d,i) => ({id:i, name:d.name, sector:d.sector, asistencia:false, voto:null}));
 
 function PieChart({favor,contra,neutro,asist}) {
   const sz=110, cx=55, cy=55, r=44, hole=27;
@@ -59,7 +59,9 @@ function PieChart({favor,contra,neutro,asist}) {
 }
 
 function App() {
-  const [personas, setPersonas] = useState(initPersonas);
+  const [personas, setPersonas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("lista");
   const [time, setTime] = useState("--:--:--");
@@ -71,8 +73,8 @@ function App() {
   const [newSector, setNewSector] = useState(SECTORES[0]);
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
-  const nextId = useRef(INIT_DATA.length);
 
+  // Reloj
   useEffect(() => {
     const tick = () => {
       const d = new Date(), p = n=>String(n).padStart(2,"0");
@@ -83,34 +85,122 @@ function App() {
     tick(); const id=setInterval(tick,1000); return ()=>clearInterval(id);
   },[]);
 
+  // Cargar datos desde API
+  const cargarDatos = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/personas`);
+      const data = await res.json();
+      setPersonas(data.map(p => ({
+        id: p.id,
+        name: p.nombre,
+        sector: p.sector,
+        asistencia: p.asistencia,
+        voto: p.voto,
+      })));
+    } catch(err) {
+      showToast("⚠️ Error conectando al servidor");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Cargar al inicio y refrescar cada 10 segundos
+  useEffect(() => {
+    cargarDatos();
+    const id = setInterval(cargarDatos, 10000);
+    return () => clearInterval(id);
+  }, [cargarDatos]);
+
   const showToast = msg => {
     setToast(msg);
     if(toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(()=>setToast(""),2500);
   };
 
-  const toggle = (id,campo,val) => setPersonas(prev=>prev.map(p=>{
-    if(p.id!==id) return p;
-    if(campo==="a"){const a=!p.asistencia; return{...p,asistencia:a,voto:a?p.voto:null};}
-    const voto=p.voto===val?null:val;
-    return{...p,voto,asistencia:voto?true:p.asistencia};
-  }));
-
-  const cambiarSector = (id,sector) => setPersonas(prev=>prev.map(p=>p.id===id?{...p,sector}:p));
-  const eliminar = id => { setPersonas(prev=>prev.filter(p=>p.id!==id)); showToast("Eliminado"); };
-
-  const agregar = () => {
-    if(!newName.trim()) return;
-    setPersonas(prev=>[...prev,{id:nextId.current++,name:newName.trim().toUpperCase(),sector:newSector,asistencia:false,voto:null}]);
-    setNewName(""); setAddModal(false); showToast("Persona agregada ✓");
+  const toggle = async (id, campo, val) => {
+    const p = personas.find(x=>x.id===id);
+    if (!p) return;
+    let body = {};
+    if (campo==="a") {
+      body.asistencia = !p.asistencia;
+      if (!body.asistencia) body.voto = null;
+    } else {
+      body.voto = p.voto===val ? null : val;
+      body.asistencia = body.voto ? true : p.asistencia;
+    }
+    // Optimistic update
+    setPersonas(prev=>prev.map(x=>x.id===id?{...x,...body,name:x.name}:x));
+    setSyncing(true);
+    try {
+      await fetch(`${API_URL}/personas/${id}`, {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(body)
+      });
+    } catch(err) {
+      showToast("⚠️ Error al guardar");
+      cargarDatos();
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  const limpiar = () => { if(!window.confirm("¿Limpiar toda la lista?")) return; setPersonas(prev=>prev.map(p=>({...p,asistencia:false,voto:null}))); showToast("Lista limpiada"); };
+  const cambiarSector = async (id, sector) => {
+    setPersonas(prev=>prev.map(p=>p.id===id?{...p,sector}:p));
+    try {
+      await fetch(`${API_URL}/personas/${id}`, {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({sector})
+      });
+    } catch(err) { showToast("⚠️ Error al guardar"); }
+  };
 
-  const abrirModal = () => { const d=new Date(),p=n=>String(n).padStart(2,"0"); setTitulo(`Reporte ${p(d.getHours())}:${p(d.getMinutes())}`); setModal(true); };
+  const eliminar = async (id) => {
+    setPersonas(prev=>prev.filter(p=>p.id!==id));
+    try {
+      await fetch(`${API_URL}/personas/${id}`, {method:"DELETE"});
+      showToast("Eliminado");
+    } catch(err) { showToast("⚠️ Error al eliminar"); cargarDatos(); }
+  };
 
-  const g = personas;
-  const gStats = { total:g.length, asist:g.filter(p=>p.asistencia).length, favor:g.filter(p=>p.voto==="f").length, contra:g.filter(p=>p.voto==="c").length, neutro:g.filter(p=>p.voto==="n").length };
+  const agregar = async () => {
+    if (!newName.trim()) return;
+    const nombre = newName.trim().toUpperCase();
+    try {
+      const res = await fetch(`${API_URL}/personas`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({nombre, sector:newSector})
+      });
+      const nueva = await res.json();
+      setPersonas(prev=>[...prev, {id:nueva.id, name:nueva.nombre, sector:nueva.sector, asistencia:false, voto:null}]);
+      setNewName(""); setAddModal(false); showToast("Persona agregada ✓");
+    } catch(err) { showToast("⚠️ Error al agregar"); }
+  };
+
+  const limpiar = async () => {
+    if (!window.confirm("¿Limpiar toda la lista?")) return;
+    setPersonas(prev=>prev.map(p=>{...p,asistencia:false,voto:null}));
+    try {
+      await fetch(`${API_URL}/reset`, {method:"POST"});
+      showToast("Lista limpiada");
+    } catch(err) { showToast("⚠️ Error al limpiar"); }
+  };
+
+  const abrirModal = () => {
+    const d=new Date(), p=n=>String(n).padStart(2,"0");
+    setTitulo(`Reporte ${p(d.getHours())}:${p(d.getMinutes())}`);
+    setModal(true);
+  };
+
+  const gStats = {
+    total:personas.length,
+    asist:personas.filter(p=>p.asistencia).length,
+    favor:personas.filter(p=>p.voto==="f").length,
+    contra:personas.filter(p=>p.voto==="c").length,
+    neutro:personas.filter(p=>p.voto==="n").length,
+  };
 
   const sectorStats = SECTORES.map(sec=>{
     const m=personas.filter(p=>p.sector===sec);
@@ -118,8 +208,7 @@ function App() {
   }).filter(s=>s.total>0);
 
   const filtered = personas.filter(p=>p.name.toLowerCase().includes(query.toLowerCase()));
-  const grouped = SECTORES.map(sec=>({sector:sec,items:filtered.filter(p=>p.sector===sec)})).filter(g=>g.items.length>0);
-
+  const grouped = SECTORES.map(sec=>{sector:sec,items:filtered.filter(p=>p.sector===sec)}).filter(g=>g.items.length>0);
   const bc = p => { if(!p.asistencia) return "#2a2f42"; if(p.voto==="f") return "#4f7fff"; if(p.voto==="c") return "#ef4444"; if(p.voto==="n") return "#d97706"; return "#22c55e"; };
 
   const genReporte = () => {
@@ -147,7 +236,15 @@ function App() {
   };
 
   const inputStyle = {width:"100%",background:"#1e2333",border:"1px solid #2a2f42",borderRadius:9,color:"#e8ecf4",fontSize:14,padding:"10px 12px",outline:"none",marginBottom:12,fontFamily:"inherit"};
-  const selectStyle = {...inputStyle,marginBottom:12};
+  const selectStyle = {...inputStyle};
+
+  if (loading) return (
+    <div style={{background:"#0f1117",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#e8ecf4",fontFamily:"-apple-system,sans-serif"}}>
+      <div style={{fontSize:32,marginBottom:16}}>📋</div>
+      <div style={{fontSize:16,fontWeight:600,marginBottom:8}}>CIPOLYS · Pase de Lista</div>
+      <div style={{fontSize:13,color:"#6b7394"}}>Conectando a la base de datos...</div>
+    </div>
+  );
 
   return (
     <div style={{background:"#0f1117",minHeight:"100vh",color:"#e8ecf4",fontFamily:"-apple-system,sans-serif",fontSize:14}}>
@@ -157,11 +254,15 @@ function App() {
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
           <div style={{display:"flex",alignItems:"center",gap:9}}>
             <div style={{width:32,height:32,background:"linear-gradient(135deg,#4f7fff,#7c3aed)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>📋</div>
-            <div><div style={{fontSize:16,fontWeight:700}}>Pase de Lista</div><div style={{fontSize:10,color:"#6b7394"}}>CIPOLYS · Semáforo</div></div>
+            <div>
+              <div style={{fontSize:16,fontWeight:700}}>Pase de Lista</div>
+              <div style={{fontSize:10,color:"#6b7394"}}>CIPOLYS · Semáforo</div>
+            </div>
           </div>
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:15,fontWeight:700,color:"#4f7fff"}}>{time}</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#4f7fff"}}>{time}</div>
             <div style={{fontSize:10,color:"#6b7394"}}>{date}</div>
+            {syncing && <div style={{fontSize:9,color:"#d97706",marginTop:1}}>⟳ sincronizando...</div>}
           </div>
         </div>
         {tab==="lista" && (
@@ -174,7 +275,7 @@ function App() {
       </div>
 
       {/* TABS */}
-      <div style={{display:"flex",gap:0,background:"#1e2333",borderRadius:10,padding:3,margin:"10px 14px 0"}}>
+      <div style={{display:"flex",background:"#1e2333",borderRadius:10,padding:3,margin:"10px 14px 0"}}>
         {[["lista","📋 Lista"],["stats","📊 Estadísticas"]].map(([k,lbl])=>(
           <button key={k} onClick={()=>setTab(k)} style={{flex:1,padding:"8px 0",textAlign:"center",fontSize:13,fontWeight:500,borderRadius:8,border:"none",cursor:"pointer",background:tab===k?"#4f7fff":"transparent",color:tab===k?"#fff":"#6b7394"}}>{lbl}</button>
         ))}
@@ -201,22 +302,22 @@ function App() {
                 <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 0 6px",paddingBottom:6,borderBottom:`2px solid ${col}`}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:col,flexShrink:0}}/>
                   <div style={{fontWeight:700,fontSize:12,color:col,textTransform:"uppercase",letterSpacing:.8}}>{sector}</div>
-                  <div style={{fontSize:11,color:"#6b7394"}}>({items.length})</div>
+                  <div style={{fontSize:11,color:"#6b7394"}}>(({items.length}))</div>
                 </div>
                 {items.map(p=>(
                   <div key={p.id} style={{background:"#181c27",border:"1px solid #2a2f42",borderLeft:`3px solid ${bc(p)}`,borderRadius:10,marginBottom:6,padding:"10px 11px"}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:7,gap:8}}>
                       <div style={{fontSize:13,fontWeight:500,lineHeight:1.3,flex:1}}>{p.name}</div>
-                      <button onClick={()=>eliminar(p.id)} style={{background:"none",border:"none",color:"#6b7394",fontSize:16,cursor:"pointer",padding:"0 2px",flexShrink:0,lineHeight:1}}>✕</button>
+                      <button onClick={()=>eliminar(p.id)} style={{background:"none",border:"none",color:"#6b7394",fontSize:16,cursor:"pointer",padding:"0 2px",flexShrink:0}}>✕</button>
                     </div>
                     <select value={p.sector} onChange={e=>cambiarSector(p.id,e.target.value)}
                       style={{width:"100%",background:"#1e2333",border:"1px solid #2a2f42",borderRadius:7,color:"#9aa",fontSize:11,padding:"5px 8px",marginBottom:8,outline:"none",fontFamily:"inherit"}}>
                       {SECTORES.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {[[" a","#22c55e",p.asistencia?p.asistencia?"✓ Presente":"Asistencia":"Asistencia"],["f","#4f7fff","A favor"],["c","#ef4444","En contra"],["n","#d97706","Neutro"]].map(([v,col,lbl])=>{
-                        const active = v===" a"?p.asistencia:p.voto===v;
-                        return <button key={v} onClick={()=>toggle(p.id,v===" a"?"a":"v",v.trim())} style={{borderRadius:7,fontSize:12,fontWeight:500,padding:"6px 10px",lineHeight:1,cursor:"pointer",background:active?`${col}22`:"#1e2333",color:active?col:"#6b7394",border:`1px solid ${active?col:"#2a2f42"}`}}>{v===" a"&&p.asistencia?"✓ Presente":lbl}</button>;
+                      {[["a","#22c55e",p.asistencia?"✓ Presente":"Asistencia"],["f","#4f7fff","A favor"],["c","#ef4444","En contra"],["n","#d97706","Neutro"]].map(([v,col,lbl])=>{
+                        const active = v==="a"?p.asistencia:p.voto===v;
+                        return <button key={v} onClick={()=>toggle(p.id,v==="a"?"a":"v",v)} style={{borderRadius:7,fontSize:12,fontWeight:500,padding:"6px 10px",lineHeight:1,cursor:"pointer",background:active?`${col}22`:"#1e2333",color:active?col:"#6b7394",border:`1px solid ${active?col:"#2a2f42"}`}}>{lbl}</button>;
                       })}
                     </div>
                   </div>
@@ -285,7 +386,7 @@ function App() {
           <div style={{fontSize:17,fontWeight:700,marginBottom:5}}>Agregar persona</div>
           <div style={{color:"#6b7394",fontSize:12,marginBottom:14}}>Nombre y sector</div>
           <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="NOMBRE COMPLETO" style={inputStyle}/>
-          <select value={newSector} onChange={e=>setNewSector(e.target.value)} style={selectStyle}>
+          <select value={newSector} onChange={e=>setNewSector(e.target.value)} style={{...selectStyle,marginBottom:13}}>
             {SECTORES.map(s=><option key={s} value={s}>{s}</option>)}
           </select>
           <div style={{display:"flex",gap:8}}>
@@ -299,7 +400,6 @@ function App() {
     </div>
   );
 }
-
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(<App />);
