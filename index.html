@@ -10,6 +10,7 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box }
 body { background:#0f1117 }
+select { -webkit-appearance:none; appearance:none }
 select option { background:#1e2333; color:#e8ecf4 }
 </style>
 </head>
@@ -19,14 +20,14 @@ select option { background:#1e2333; color:#e8ecf4 }
 const { useState, useEffect, useRef, useCallback } = React;
 
 const API_URL = "https://pase-lista-cipolys-production.up.railway.app";
-
-
-
 const SECTORES = ["No académico","Posgrado","Ciencias Políticas","Relaciones Internacionales","Sociología","No identificado"];
-const SECTOR_COLORS = {"No académico":"#6366f1","Posgrado":"#0ea5e9","Ciencias Políticas":"#22c55e","Relaciones Internacionales":"#f59e0b","Sociología":"#ec4899","No identificado":"#94a3b8"};
+const COLORS = {
+  "No académico":"#6366f1","Posgrado":"#0ea5e9","Ciencias Políticas":"#22c55e",
+  "Relaciones Internacionales":"#f59e0b","Sociología":"#ec4899","No identificado":"#94a3b8"
+};
 
-function PieChart({favor,contra,neutro,asist}) {
-  const sz=110, cx=55, cy=55, r=44, hole=27;
+function PieChart({favor, contra, neutro, asist}) {
+  const cx=55, cy=55, r=44, hole=27, sz=110;
   const sum = favor+contra+neutro;
   if (sum===0) return (
     <svg width={sz} height={sz}>
@@ -36,17 +37,18 @@ function PieChart({favor,contra,neutro,asist}) {
       <text x={cx} y={cy+10} textAnchor="middle" fill="#6b7394" fontSize="8">presentes</text>
     </svg>
   );
-  const slices = [{val:favor,color:"#4f7fff"},{val:contra,color:"#ef4444"},{val:neutro,color:"#d97706"}];
   let a = -Math.PI/2;
-  const arcs = slices.map(s => {
-    const pct = s.val/sum, start=a;
-    a += pct*2*Math.PI;
+  const arcs = [{val:favor,color:"#4f7fff"},{val:contra,color:"#ef4444"},{val:neutro,color:"#d97706"}].map(s => {
+    const start=a; a += (s.val/sum)*2*Math.PI;
     return {...s, start, end:a};
   });
   const arc = (s,e,ro,ri) => {
     if (Math.abs(e-s)<0.001) return "";
     const lg = e-s>Math.PI?1:0;
-    return `M${cx+ro*Math.cos(s)},${cy+ro*Math.sin(s)} A${ro},${ro} 0 ${lg},1 ${cx+ro*Math.cos(e)},${cy+ro*Math.sin(e)} L${cx+ri*Math.cos(e)},${cy+ri*Math.sin(e)} A${ri},${ri} 0 ${lg},0 ${cx+ri*Math.cos(s)},${cy+ri*Math.sin(s)} Z`;
+    return "M"+(cx+ro*Math.cos(s))+","+(cy+ro*Math.sin(s))
+      +" A"+ro+","+ro+" 0 "+lg+",1 "+(cx+ro*Math.cos(e))+","+(cy+ro*Math.sin(e))
+      +" L"+(cx+ri*Math.cos(e))+","+(cy+ri*Math.sin(e))
+      +" A"+ri+","+ri+" 0 "+lg+",0 "+(cx+ri*Math.cos(s))+","+(cy+ri*Math.sin(s))+" Z";
   };
   return (
     <svg width={sz} height={sz}>
@@ -77,44 +79,50 @@ function App() {
   // Reloj
   useEffect(() => {
     const tick = () => {
-      const d = new Date(), p = n=>String(n).padStart(2,"0");
-      setTime(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`);
-      const D=["dom","lun","mar","mié","jue","vie","sáb"], M=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
-      setDate(`${D[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`);
+      const d = new Date(), p = n => String(n).padStart(2,"0");
+      setTime(p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds()));
+      const D=["dom","lun","mar","mié","jue","vie","sáb"];
+      const M=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+      setDate(D[d.getDay()]+" "+d.getDate()+" "+M[d.getMonth()]+" "+d.getFullYear());
     };
     tick(); const id=setInterval(tick,1000); return ()=>clearInterval(id);
   },[]);
 
-  // Cargar datos desde API
+  const showToast = msg => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(()=>setToast(""), 2500);
+  };
+
+  // Cargar datos de la base de datos
   const cargarDatos = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/personas`);
+      const res = await fetch(API_URL+"/personas");
       const data = await res.json();
       setPersonas(data.map(p => ({
-        id: p.id,
-        name: p.nombre,
-        sector: p.sector,
-        asistencia: p.asistencia,
-        voto: p.voto,
+        id:p.id, name:p.nombre, sector:p.sector,
+        asistencia:p.asistencia, voto:p.voto
       })));
-    } catch(err) {
-      showToast("⚠️ Error conectando al servidor");
+    } catch(e) {
+      showToast("Sin conexión al servidor");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Cargar al inicio y refrescar cada 10 segundos
   useEffect(() => {
     cargarDatos();
     const id = setInterval(cargarDatos, 10000);
     return () => clearInterval(id);
   }, [cargarDatos]);
 
-  const showToast = msg => {
-    setToast(msg);
-    if(toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(()=>setToast(""),2500);
+  const patch = async (id, body) => {
+    const res = await fetch(API_URL+"/personas/"+id, {
+      method:"PATCH",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body)
+    });
+    return res.json();
   };
 
   const toggle = async (id, campo, val) => {
@@ -128,73 +136,59 @@ function App() {
       body.voto = p.voto===val ? null : val;
       body.asistencia = body.voto ? true : p.asistencia;
     }
-    // Optimistic update
-    setPersonas(prev=>prev.map(x=>x.id===id?{...x,...body,name:x.name}:x));
+    // Actualización optimista (inmediata en UI)
+    setPersonas(prev => prev.map(x => x.id===id ? {...x,...body} : x));
     setSyncing(true);
-    try {
-      await fetch(`${API_URL}/personas/${id}`, {
-        method:"PATCH",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify(body)
-      });
-    } catch(err) {
-      showToast("⚠️ Error al guardar");
-      cargarDatos();
-    } finally {
-      setSyncing(false);
-    }
+    try { await patch(id, body); }
+    catch(e) { showToast("Error al guardar"); cargarDatos(); }
+    finally { setSyncing(false); }
   };
 
   const cambiarSector = async (id, sector) => {
-    setPersonas(prev=>prev.map(p=>p.id===id?{...p,sector}:p));
-    try {
-      await fetch(`${API_URL}/personas/${id}`, {
-        method:"PATCH",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({sector})
-      });
-    } catch(err) { showToast("⚠️ Error al guardar"); }
+    setPersonas(prev => prev.map(p => p.id===id ? {...p,sector} : p));
+    try { await patch(id, {sector}); }
+    catch(e) { showToast("Error al guardar"); }
   };
 
   const eliminar = async (id) => {
-    setPersonas(prev=>prev.filter(p=>p.id!==id));
+    setPersonas(prev => prev.filter(p => p.id!==id));
     try {
-      await fetch(`${API_URL}/personas/${id}`, {method:"DELETE"});
+      await fetch(API_URL+"/personas/"+id, {method:"DELETE"});
       showToast("Eliminado");
-    } catch(err) { showToast("⚠️ Error al eliminar"); cargarDatos(); }
+    } catch(e) { showToast("Error al eliminar"); cargarDatos(); }
   };
 
   const agregar = async () => {
     if (!newName.trim()) return;
-    const nombre = newName.trim().toUpperCase();
     try {
-      const res = await fetch(`${API_URL}/personas`, {
+      const res = await fetch(API_URL+"/personas", {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({nombre, sector:newSector})
+        body:JSON.stringify({nombre:newName.trim().toUpperCase(), sector:newSector})
       });
       const nueva = await res.json();
-      setPersonas(prev=>[...prev, {id:nueva.id, name:nueva.nombre, sector:nueva.sector, asistencia:false, voto:null}]);
-      setNewName(""); setAddModal(false); showToast("Persona agregada ✓");
-    } catch(err) { showToast("⚠️ Error al agregar"); }
+      setPersonas(prev => [...prev, {id:nueva.id,name:nueva.nombre,sector:nueva.sector,asistencia:false,voto:null}]);
+      setNewName(""); setAddModal(false); showToast("Persona agregada");
+    } catch(e) { showToast("Error al agregar"); }
   };
 
   const limpiar = async () => {
     if (!window.confirm("¿Limpiar toda la lista?")) return;
-    setPersonas(prev=>prev.map(p=>{...p,asistencia:false,voto:null}));
+    setPersonas(prev => prev.map(p => ({...p,asistencia:false,voto:null})));
     try {
-      await fetch(`${API_URL}/reset`, {method:"POST"});
+      await fetch(API_URL+"/reset", {method:"POST"});
       showToast("Lista limpiada");
-    } catch(err) { showToast("⚠️ Error al limpiar"); }
+    } catch(e) { showToast("Error al limpiar"); }
   };
 
   const abrirModal = () => {
     const d=new Date(), p=n=>String(n).padStart(2,"0");
-    setTitulo(`Reporte ${p(d.getHours())}:${p(d.getMinutes())}`);
+    setTitulo("Reporte "+p(d.getHours())+":"+p(d.getMinutes()));
     setModal(true);
   };
 
-  const gStats = {
+  // Stats globales
+  const gs = {
     total:personas.length,
     asist:personas.filter(p=>p.asistencia).length,
     favor:personas.filter(p=>p.voto==="f").length,
@@ -202,41 +196,99 @@ function App() {
     neutro:personas.filter(p=>p.voto==="n").length,
   };
 
-  const sectorStats = SECTORES.map(sec=>{
-    const m=personas.filter(p=>p.sector===sec);
-    return{sector:sec,total:m.length,asist:m.filter(p=>p.asistencia).length,favor:m.filter(p=>p.voto==="f").length,contra:m.filter(p=>p.voto==="c").length,neutro:m.filter(p=>p.voto==="n").length};
+  const sStats = SECTORES.map(sec => {
+    const m = personas.filter(p=>p.sector===sec);
+    return {sector:sec, total:m.length,
+      asist:m.filter(p=>p.asistencia).length,
+      favor:m.filter(p=>p.voto==="f").length,
+      contra:m.filter(p=>p.voto==="c").length,
+      neutro:m.filter(p=>p.voto==="n").length};
   }).filter(s=>s.total>0);
 
   const filtered = personas.filter(p=>p.name.toLowerCase().includes(query.toLowerCase()));
-  const grouped = SECTORES.map(sec=>{sector:sec,items:filtered.filter(p=>p.sector===sec)}).filter(g=>g.items.length>0);
-  const bc = p => { if(!p.asistencia) return "#2a2f42"; if(p.voto==="f") return "#4f7fff"; if(p.voto==="c") return "#ef4444"; if(p.voto==="n") return "#d97706"; return "#22c55e"; };
+  const grouped = SECTORES.map(sec=>({sector:sec,items:filtered.filter(p=>p.sector===sec)})).filter(g=>g.items.length>0);
+
+  const bc = p => {
+    if (!p.asistencia) return "#2a2f42";
+    if (p.voto==="f") return "#4f7fff";
+    if (p.voto==="c") return "#ef4444";
+    if (p.voto==="n") return "#d97706";
+    return "#22c55e";
+  };
 
   const genReporte = () => {
     setModal(false);
     const d=new Date(), p=n=>String(n).padStart(2,"0");
-    const D=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"], M=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-    const fecha=`${D[d.getDay()]}, ${d.getDate()} de ${M[d.getMonth()]} de ${d.getFullYear()}`, hora=`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-    const rows = arr=>arr.map((x,i)=>`<tr style="background:${i%2?"#f5f5f5":"#fff"}"><td style="padding:4px 8px;font-size:9pt">${x.name}</td><td style="padding:4px 8px;font-size:9pt;color:#555">${x.sector}</td><td style="padding:4px 8px;font-size:9pt;color:${x.voto==="f"?"#2563eb":x.voto==="c"?"#dc2626":x.voto==="n"?"#d97706":"#aaa"}">${x.voto==="f"?"A favor":x.voto==="c"?"En contra":x.voto==="n"?"Neutro":"—"}</td></tr>`).join("");
-    const secHtml=SECTORES.map(sec=>{const m=personas.filter(p=>p.sector===sec&&p.asistencia);if(!m.length)return"";const col=SECTOR_COLORS[sec]||"#888";return`<div style="margin-bottom:16px"><div style="background:${col};color:#fff;padding:5px 10px;font-weight:700;font-size:10pt;border-radius:4px 4px 0 0">${sec} (${m.length})</div><table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f0f0f0"><th style="padding:4px 8px;font-size:8pt;text-align:left">Nombre</th><th style="padding:4px 8px;font-size:8pt;text-align:left">Sector</th><th style="padding:4px 8px;font-size:8pt;text-align:left">Voto</th></tr></thead><tbody>${rows(m)}</tbody></table></div>`;}).join("");
-    const statsRows=sectorStats.map(s=>`<tr><td style="padding:5px 8px;font-size:9pt;border-left:4px solid ${SECTOR_COLORS[s.sector]||"#888"}">${s.sector}</td><td style="padding:5px 8px;font-size:9pt;text-align:center">${s.total}</td><td style="padding:5px 8px;font-size:9pt;text-align:center;color:#16a34a">${s.asist}</td><td style="padding:5px 8px;font-size:9pt;text-align:center;color:#2563eb">${s.favor}</td><td style="padding:5px 8px;font-size:9pt;text-align:center;color:#dc2626">${s.contra}</td><td style="padding:5px 8px;font-size:9pt;text-align:center;color:#d97706">${s.neutro}</td></tr>`).join("");
-    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title><style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:850px;margin:0 auto}td,th{border-bottom:1px solid #e0e0e0}@media print{.nop{display:none}}</style></head><body>
-<div style="border-bottom:3px solid #2855c8;padding-bottom:12px;margin-bottom:18px"><div style="font-size:20pt;font-weight:700;color:#2855c8">CIPOLYS — Pase de Lista</div><div style="font-size:12pt;margin-top:4px">${titulo}</div><div style="font-size:9pt;color:#666;margin-top:3px">${fecha} · ${hora}</div></div>
-<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
-<div style="background:#f0f0f0;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700">${gStats.total}</div><div style="font-size:8pt;color:#666">TOTAL</div></div>
-<div style="background:#dcfce7;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#16a34a">${gStats.asist}</div><div style="font-size:8pt;color:#666">ASISTENTES</div></div>
-<div style="background:#dbeafe;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#2563eb">${gStats.favor}</div><div style="font-size:8pt;color:#666">A FAVOR</div></div>
-<div style="background:#fee2e2;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#dc2626">${gStats.contra}</div><div style="font-size:8pt;color:#666">EN CONTRA</div></div>
-<div style="background:#fef3c7;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#d97706">${gStats.neutro}</div><div style="font-size:8pt;color:#666">NEUTRO</div></div>
-</div>
-<h3 style="margin-bottom:8px;font-size:11pt;color:#333">RESUMEN POR SECTOR</h3>
-<table style="width:100%;border-collapse:collapse;margin-bottom:24px"><thead><tr style="background:#f0f0f0"><th style="padding:5px 8px;font-size:8pt;text-align:left">Sector</th><th style="padding:5px 8px;font-size:8pt">Total</th><th style="padding:5px 8px;font-size:8pt;color:#16a34a">Asist.</th><th style="padding:5px 8px;font-size:8pt;color:#2563eb">A favor</th><th style="padding:5px 8px;font-size:8pt;color:#dc2626">En contra</th><th style="padding:5px 8px;font-size:8pt;color:#d97706">Neutro</th></tr></thead><tbody>${statsRows}</tbody></table>
-<h3 style="margin-bottom:12px;font-size:11pt;color:#333">ASISTENTES POR SECTOR</h3>${secHtml}
-<div class="nop" style="text-align:center;margin-top:24px"><button onclick="window.print()" style="background:#2855c8;color:#fff;border:none;padding:13px 32px;font-size:13pt;border-radius:8px;cursor:pointer">Imprimir / Guardar PDF</button></div></body></html>`;
-    const w=window.open("","_blank"); if(w){w.document.write(html);w.document.close();} else showToast("Permite ventanas emergentes");
+    const D=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+    const M=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+    const fecha=D[d.getDay()]+", "+d.getDate()+" de "+M[d.getMonth()]+" de "+d.getFullYear();
+    const hora=p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds());
+
+    const rows = arr => arr.map((x,i)=>
+      '<tr style="background:'+(i%2?"#f5f5f5":"#fff")+'">'
+      +'<td style="padding:4px 8px;font-size:9pt">'+x.name+'</td>'
+      +'<td style="padding:4px 8px;font-size:9pt;color:#555">'+x.sector+'</td>'
+      +'<td style="padding:4px 8px;font-size:9pt;color:'+(x.voto==="f"?"#2563eb":x.voto==="c"?"#dc2626":x.voto==="n"?"#d97706":"#aaa")+'">'
+      +(x.voto==="f"?"A favor":x.voto==="c"?"En contra":x.voto==="n"?"Neutro":"—")+'</td></tr>'
+    ).join("");
+
+    const secHtml = SECTORES.map(sec => {
+      const m = personas.filter(p=>p.sector===sec && p.asistencia);
+      if (!m.length) return "";
+      const col = COLORS[sec]||"#888";
+      return '<div style="margin-bottom:16px">'
+        +'<div style="background:'+col+';color:#fff;padding:5px 10px;font-weight:700;font-size:10pt;border-radius:4px 4px 0 0">'+sec+' ('+m.length+')</div>'
+        +'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f0f0f0">'
+        +'<th style="padding:4px 8px;font-size:8pt;text-align:left">Nombre</th>'
+        +'<th style="padding:4px 8px;font-size:8pt;text-align:left">Sector</th>'
+        +'<th style="padding:4px 8px;font-size:8pt;text-align:left">Voto</th>'
+        +'</tr></thead><tbody>'+rows(m)+'</tbody></table></div>';
+    }).join("");
+
+    const statsRows = sStats.map(s=>
+      '<tr><td style="padding:5px 8px;font-size:9pt;border-left:4px solid '+(COLORS[s.sector]||"#888")+'">'+s.sector+'</td>'
+      +'<td style="padding:5px 8px;font-size:9pt;text-align:center">'+s.total+'</td>'
+      +'<td style="padding:5px 8px;font-size:9pt;text-align:center;color:#16a34a">'+s.asist+'</td>'
+      +'<td style="padding:5px 8px;font-size:9pt;text-align:center;color:#2563eb">'+s.favor+'</td>'
+      +'<td style="padding:5px 8px;font-size:9pt;text-align:center;color:#dc2626">'+s.contra+'</td>'
+      +'<td style="padding:5px 8px;font-size:9pt;text-align:center;color:#d97706">'+s.neutro+'</td></tr>'
+    ).join("");
+
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+'</title>'
+      +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#111;max-width:850px;margin:0 auto}'
+      +'td,th{border-bottom:1px solid #e0e0e0}@media print{.nop{display:none}}</style></head><body>'
+      +'<div style="border-bottom:3px solid #2855c8;padding-bottom:12px;margin-bottom:18px">'
+      +'<div style="font-size:20pt;font-weight:700;color:#2855c8">CIPOLYS — Pase de Lista</div>'
+      +'<div style="font-size:12pt;margin-top:4px">'+titulo+'</div>'
+      +'<div style="font-size:9pt;color:#666;margin-top:3px">'+fecha+' · '+hora+'</div></div>'
+      +'<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">'
+      +'<div style="background:#f0f0f0;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700">'+gs.total+'</div><div style="font-size:8pt;color:#666">TOTAL</div></div>'
+      +'<div style="background:#dcfce7;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#16a34a">'+gs.asist+'</div><div style="font-size:8pt;color:#666">ASISTENTES</div></div>'
+      +'<div style="background:#dbeafe;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#2563eb">'+gs.favor+'</div><div style="font-size:8pt;color:#666">A FAVOR</div></div>'
+      +'<div style="background:#fee2e2;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#dc2626">'+gs.contra+'</div><div style="font-size:8pt;color:#666">EN CONTRA</div></div>'
+      +'<div style="background:#fef3c7;border-radius:8px;padding:10px 16px;text-align:center"><div style="font-size:22pt;font-weight:700;color:#d97706">'+gs.neutro+'</div><div style="font-size:8pt;color:#666">NEUTRO</div></div>'
+      +'</div>'
+      +'<h3 style="margin-bottom:8px;font-size:11pt;color:#333">RESUMEN POR SECTOR</h3>'
+      +'<table style="width:100%;border-collapse:collapse;margin-bottom:24px"><thead><tr style="background:#f0f0f0">'
+      +'<th style="padding:5px 8px;font-size:8pt;text-align:left">Sector</th>'
+      +'<th style="padding:5px 8px;font-size:8pt">Total</th>'
+      +'<th style="padding:5px 8px;font-size:8pt;color:#16a34a">Asist.</th>'
+      +'<th style="padding:5px 8px;font-size:8pt;color:#2563eb">A favor</th>'
+      +'<th style="padding:5px 8px;font-size:8pt;color:#dc2626">En contra</th>'
+      +'<th style="padding:5px 8px;font-size:8pt;color:#d97706">Neutro</th>'
+      +'</tr></thead><tbody>'+statsRows+'</tbody></table>'
+      +'<h3 style="margin-bottom:12px;font-size:11pt;color:#333">ASISTENTES POR SECTOR</h3>'
+      +secHtml
+      +'<div class="nop" style="text-align:center;margin-top:24px">'
+      +'<button onclick="window.print()" style="background:#2855c8;color:#fff;border:none;padding:13px 32px;font-size:13pt;border-radius:8px;cursor:pointer">Imprimir / Guardar PDF</button>'
+      +'</div></body></html>';
+
+    const w = window.open("","_blank");
+    if (w) { w.document.write(html); w.document.close(); }
+    else showToast("Permite ventanas emergentes");
   };
 
-  const inputStyle = {width:"100%",background:"#1e2333",border:"1px solid #2a2f42",borderRadius:9,color:"#e8ecf4",fontSize:14,padding:"10px 12px",outline:"none",marginBottom:12,fontFamily:"inherit"};
-  const selectStyle = {...inputStyle};
+  const inp = {width:"100%",background:"#1e2333",border:"1px solid #2a2f42",borderRadius:9,color:"#e8ecf4",fontSize:14,padding:"10px 12px",outline:"none",marginBottom:12,fontFamily:"inherit"};
 
   if (loading) return (
     <div style={{background:"#0f1117",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",color:"#e8ecf4",fontFamily:"-apple-system,sans-serif"}}>
@@ -262,7 +314,7 @@ function App() {
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:14,fontWeight:700,color:"#4f7fff"}}>{time}</div>
             <div style={{fontSize:10,color:"#6b7394"}}>{date}</div>
-            {syncing && <div style={{fontSize:9,color:"#d97706",marginTop:1}}>⟳ sincronizando...</div>}
+            {syncing && <div style={{fontSize:9,color:"#d97706"}}>⟳ guardando...</div>}
           </div>
         </div>
         {tab==="lista" && (
@@ -277,14 +329,19 @@ function App() {
       {/* TABS */}
       <div style={{display:"flex",background:"#1e2333",borderRadius:10,padding:3,margin:"10px 14px 0"}}>
         {[["lista","📋 Lista"],["stats","📊 Estadísticas"]].map(([k,lbl])=>(
-          <button key={k} onClick={()=>setTab(k)} style={{flex:1,padding:"8px 0",textAlign:"center",fontSize:13,fontWeight:500,borderRadius:8,border:"none",cursor:"pointer",background:tab===k?"#4f7fff":"transparent",color:tab===k?"#fff":"#6b7394"}}>{lbl}</button>
+          <button key={k} onClick={()=>setTab(k)}
+            style={{flex:1,padding:"8px 0",textAlign:"center",fontSize:13,fontWeight:500,borderRadius:8,border:"none",cursor:"pointer",background:tab===k?"#4f7fff":"transparent",color:tab===k?"#fff":"#6b7394"}}>
+            {lbl}
+          </button>
         ))}
       </div>
 
       {/* STATS BAR */}
       <div style={{display:"flex",gap:6,padding:"10px 14px",background:"#181c27",borderBottom:"1px solid #2a2f42",marginTop:10}}>
-        {[{lbl:"Total",val:gStats.total,col:"#aaa"},{lbl:"Asistentes",val:gStats.asist,col:"#22c55e"},{lbl:"A favor",val:gStats.favor,col:"#4f7fff"},{lbl:"En contra",val:gStats.contra,col:"#ef4444"},{lbl:"Neutro",val:gStats.neutro,col:"#d97706"}].map(s=>(
-          <div key={s.lbl} style={{flex:1,background:"#1e2333",borderRadius:8,padding:"7px 4px",textAlign:"center",borderTop:`2px solid ${s.col}`}}>
+        {[{lbl:"Total",val:gs.total,col:"#aaa"},{lbl:"Asistentes",val:gs.asist,col:"#22c55e"},
+          {lbl:"A favor",val:gs.favor,col:"#4f7fff"},{lbl:"En contra",val:gs.contra,col:"#ef4444"},
+          {lbl:"Neutro",val:gs.neutro,col:"#d97706"}].map(s=>(
+          <div key={s.lbl} style={{flex:1,background:"#1e2333",borderRadius:8,padding:"7px 4px",textAlign:"center",borderTop:"2px solid "+s.col}}>
             <div style={{fontSize:18,fontWeight:700,lineHeight:1,color:s.col}}>{s.val}</div>
             <div style={{fontSize:8,color:"#6b7394",marginTop:3,textTransform:"uppercase",letterSpacing:.4}}>{s.lbl}</div>
           </div>
@@ -296,28 +353,44 @@ function App() {
         <div style={{padding:"8px 12px 110px"}}>
           {grouped.length===0 && <div style={{textAlign:"center",padding:"40px 20px",color:"#6b7394"}}>Sin resultados</div>}
           {grouped.map(({sector,items})=>{
-            const col=SECTOR_COLORS[sector]||"#888";
+            const col=COLORS[sector]||"#888";
             return (
               <div key={sector}>
-                <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 0 6px",paddingBottom:6,borderBottom:`2px solid ${col}`}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,margin:"14px 0 6px",paddingBottom:6,borderBottom:"2px solid "+col}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:col,flexShrink:0}}/>
                   <div style={{fontWeight:700,fontSize:12,color:col,textTransform:"uppercase",letterSpacing:.8}}>{sector}</div>
-                  <div style={{fontSize:11,color:"#6b7394"}}>(({items.length}))</div>
+                  <div style={{fontSize:11,color:"#6b7394"}}>({items.length})</div>
                 </div>
                 {items.map(p=>(
-                  <div key={p.id} style={{background:"#181c27",border:"1px solid #2a2f42",borderLeft:`3px solid ${bc(p)}`,borderRadius:10,marginBottom:6,padding:"10px 11px"}}>
-                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:7,gap:8}}>
+                  <div key={p.id} style={{background:"#181c27",border:"1px solid #2a2f42",borderLeft:"3px solid "+bc(p),borderRadius:10,marginBottom:6,padding:"10px 11px"}}>
+                    {/* Nombre + botón eliminar */}
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,gap:8}}>
                       <div style={{fontSize:13,fontWeight:500,lineHeight:1.3,flex:1}}>{p.name}</div>
-                      <button onClick={()=>eliminar(p.id)} style={{background:"none",border:"none",color:"#6b7394",fontSize:16,cursor:"pointer",padding:"0 2px",flexShrink:0}}>✕</button>
+                      <button onClick={()=>eliminar(p.id)}
+                        style={{background:"none",border:"none",color:"#6b7394",fontSize:15,cursor:"pointer",padding:"0 2px",flexShrink:0,lineHeight:1}}>✕</button>
                     </div>
-                    <select value={p.sector} onChange={e=>cambiarSector(p.id,e.target.value)}
-                      style={{width:"100%",background:"#1e2333",border:"1px solid #2a2f42",borderRadius:7,color:"#9aa",fontSize:11,padding:"5px 8px",marginBottom:8,outline:"none",fontFamily:"inherit"}}>
-                      {SECTORES.map(s=><option key={s} value={s}>{s}</option>)}
-                    </select>
+                    {/* Selector de sector compacto */}
+                    <div style={{marginBottom:7}}>
+                      <select value={p.sector} onChange={e=>cambiarSector(p.id,e.target.value)}
+                        style={{background:"#1e2333",border:"1px solid #2a2f42",borderRadius:6,color:"#9baabb",fontSize:11,padding:"3px 8px",outline:"none",fontFamily:"inherit",width:"auto",maxWidth:"100%"}}>
+                        {SECTORES.map(s=><option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    {/* Botones de acción */}
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                      {[["a","#22c55e",p.asistencia?"✓ Presente":"Asistencia"],["f","#4f7fff","A favor"],["c","#ef4444","En contra"],["n","#d97706","Neutro"]].map(([v,col,lbl])=>{
-                        const active = v==="a"?p.asistencia:p.voto===v;
-                        return <button key={v} onClick={()=>toggle(p.id,v==="a"?"a":"v",v)} style={{borderRadius:7,fontSize:12,fontWeight:500,padding:"6px 10px",lineHeight:1,cursor:"pointer",background:active?`${col}22`:"#1e2333",color:active?col:"#6b7394",border:`1px solid ${active?col:"#2a2f42"}`}}>{lbl}</button>;
+                      {[["a","#22c55e",p.asistencia?"✓ Presente":"Asistencia"],
+                        ["f","#4f7fff","A favor"],
+                        ["c","#ef4444","En contra"],
+                        ["n","#d97706","Neutro"]].map(([v,col,lbl])=>{
+                        const active = v==="a" ? p.asistencia : p.voto===v;
+                        return (
+                          <button key={v} onClick={()=>toggle(p.id,v==="a"?"a":"v",v)}
+                            style={{borderRadius:7,fontSize:12,fontWeight:500,padding:"6px 10px",lineHeight:1,cursor:"pointer",
+                              background:active?col+"22":"#1e2333",color:active?col:"#6b7394",
+                              border:"1px solid "+(active?col:"#2a2f42")}}>
+                            {lbl}
+                          </button>
+                        );
                       })}
                     </div>
                   </div>
@@ -331,25 +404,28 @@ function App() {
       {/* ESTADÍSTICAS */}
       {tab==="stats" && (
         <div style={{padding:"12px 14px 110px"}}>
-          <div style={{fontSize:11,color:"#6b7394",marginBottom:14,textTransform:"uppercase",letterSpacing:.8}}>Estadísticas por sector</div>
-          {sectorStats.map(s=>{
-            const col=SECTOR_COLORS[s.sector]||"#888", voted=s.favor+s.contra+s.neutro;
+          <div style={{fontSize:11,color:"#6b7394",marginBottom:14,textTransform:"uppercase",letterSpacing:.8}}>Por sector</div>
+          {sStats.map(s=>{
+            const col=COLORS[s.sector]||"#888", voted=s.favor+s.contra+s.neutro;
             return (
               <div key={s.sector} style={{background:"#181c27",border:"1px solid #2a2f42",borderRadius:12,marginBottom:12,overflow:"hidden"}}>
-                <div style={{background:`${col}22`,borderBottom:`1px solid ${col}44`,padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:10,height:10,borderRadius:"50%",background:col}}/>
+                <div style={{background:col+"22",borderBottom:"1px solid "+col+"44",padding:"9px 14px",display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:9,height:9,borderRadius:"50%",background:col,flexShrink:0}}/>
                   <div style={{fontWeight:700,fontSize:13,color:col}}>{s.sector}</div>
                   <div style={{marginLeft:"auto",fontSize:11,color:"#6b7394"}}>{s.asist}/{s.total} presentes</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",padding:"12px 14px",gap:14}}>
                   <PieChart favor={s.favor} contra={s.contra} neutro={s.neutro} asist={s.asist}/>
                   <div style={{flex:1}}>
-                    {[["A favor",s.favor,"#4f7fff"],["En contra",s.contra,"#ef4444"],["Neutro",s.neutro,"#d97706"],["Sin voto",Math.max(0,s.asist-voted),"#6b7394"]].map(([lbl,val,col])=>(
+                    {[["A favor",s.favor,"#4f7fff"],["En contra",s.contra,"#ef4444"],["Neutro",s.neutro,"#d97706"],
+                      ["Sin voto",Math.max(0,s.asist-voted),"#6b7394"]].map(([lbl,val,c])=>(
                       <div key={lbl} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                        <div style={{width:8,height:8,borderRadius:"50%",background:col,flexShrink:0}}/>
+                        <div style={{width:8,height:8,borderRadius:"50%",background:c,flexShrink:0}}/>
                         <div style={{fontSize:12,color:"#aaa",flex:1}}>{lbl}</div>
-                        <div style={{fontSize:13,fontWeight:700,color:col}}>{val}</div>
-                        <div style={{fontSize:11,color:"#6b7394",width:34,textAlign:"right"}}>{voted>0&&lbl!=="Sin voto"?Math.round(val/voted*100)+"%":""}</div>
+                        <div style={{fontSize:13,fontWeight:700,color:c}}>{val}</div>
+                        <div style={{fontSize:11,color:"#6b7394",width:34,textAlign:"right"}}>
+                          {voted>0&&lbl!=="Sin voto"?Math.round(val/voted*100)+"%":""}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -362,41 +438,59 @@ function App() {
 
       {/* FOOTER */}
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#181c27",borderTop:"1px solid #2a2f42",padding:"10px 14px",display:"flex",gap:8,zIndex:50}}>
-        <button onClick={()=>setAddModal(true)} style={{background:"#22c55e22",color:"#22c55e",border:"1px solid #22c55e",borderRadius:10,fontSize:13,fontWeight:600,padding:"10px 12px",cursor:"pointer"}}>+ Agregar</button>
-        <button onClick={limpiar} style={{background:"#1e2333",color:"#6b7394",border:"1px solid #2a2f42",borderRadius:10,fontSize:18,padding:"10px 12px",cursor:"pointer"}}>🗑️</button>
-        <button onClick={abrirModal} style={{flex:1,background:"linear-gradient(135deg,#4f7fff,#7c3aed)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,padding:"13px",cursor:"pointer"}}>Generar PDF</button>
+        <button onClick={()=>setAddModal(true)}
+          style={{background:"#22c55e22",color:"#22c55e",border:"1px solid #22c55e",borderRadius:10,fontSize:13,fontWeight:600,padding:"10px 12px",cursor:"pointer"}}>
+          + Agregar
+        </button>
+        <button onClick={limpiar}
+          style={{background:"#1e2333",color:"#6b7394",border:"1px solid #2a2f42",borderRadius:10,fontSize:18,padding:"10px 12px",cursor:"pointer"}}>
+          🗑️
+        </button>
+        <button onClick={abrirModal}
+          style={{flex:1,background:"linear-gradient(135deg,#4f7fff,#7c3aed)",color:"#fff",border:"none",borderRadius:10,fontSize:13,fontWeight:600,padding:"13px",cursor:"pointer"}}>
+          Generar PDF
+        </button>
       </div>
 
       {/* MODAL REPORTE */}
-      {modal && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-        <div style={{background:"#181c27",border:"1px solid #2a2f42",borderRadius:14,padding:22,width:"100%",maxWidth:380}}>
-          <div style={{fontSize:17,fontWeight:700,marginBottom:5}}>Generar Reporte</div>
-          <div style={{color:"#6b7394",fontSize:12,marginBottom:14}}>Título</div>
-          <input value={titulo} onChange={e=>setTitulo(e.target.value)} style={inputStyle}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setModal(false)} style={{flex:1,background:"#1e2333",color:"#6b7394",border:"1px solid #2a2f42",borderRadius:9,fontSize:14,padding:11,cursor:"pointer"}}>Cancelar</button>
-            <button onClick={genReporte} style={{flex:2,background:"linear-gradient(135deg,#4f7fff,#7c3aed)",color:"#fff",border:"none",borderRadius:9,fontSize:14,fontWeight:600,padding:11,cursor:"pointer"}}>Generar PDF</button>
+      {modal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#181c27",border:"1px solid #2a2f42",borderRadius:14,padding:22,width:"100%",maxWidth:380}}>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:5}}>Generar Reporte</div>
+            <div style={{color:"#6b7394",fontSize:12,marginBottom:14}}>Título</div>
+            <input value={titulo} onChange={e=>setTitulo(e.target.value)} style={inp}/>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setModal(false)} style={{flex:1,background:"#1e2333",color:"#6b7394",border:"1px solid #2a2f42",borderRadius:9,fontSize:14,padding:11,cursor:"pointer"}}>Cancelar</button>
+              <button onClick={genReporte} style={{flex:2,background:"linear-gradient(135deg,#4f7fff,#7c3aed)",color:"#fff",border:"none",borderRadius:9,fontSize:14,fontWeight:600,padding:11,cursor:"pointer"}}>Generar PDF</button>
+            </div>
           </div>
         </div>
-      </div>}
+      )}
 
       {/* MODAL AGREGAR */}
-      {addModal && <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-        <div style={{background:"#181c27",border:"1px solid #2a2f42",borderRadius:14,padding:22,width:"100%",maxWidth:380}}>
-          <div style={{fontSize:17,fontWeight:700,marginBottom:5}}>Agregar persona</div>
-          <div style={{color:"#6b7394",fontSize:12,marginBottom:14}}>Nombre y sector</div>
-          <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="NOMBRE COMPLETO" style={inputStyle}/>
-          <select value={newSector} onChange={e=>setNewSector(e.target.value)} style={{...selectStyle,marginBottom:13}}>
-            {SECTORES.map(s=><option key={s} value={s}>{s}</option>)}
-          </select>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setAddModal(false)} style={{flex:1,background:"#1e2333",color:"#6b7394",border:"1px solid #2a2f42",borderRadius:9,fontSize:14,padding:11,cursor:"pointer"}}>Cancelar</button>
-            <button onClick={agregar} style={{flex:2,background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none",borderRadius:9,fontSize:14,fontWeight:600,padding:11,cursor:"pointer"}}>Agregar</button>
+      {addModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#181c27",border:"1px solid #2a2f42",borderRadius:14,padding:22,width:"100%",maxWidth:380}}>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:5}}>Agregar persona</div>
+            <div style={{color:"#6b7394",fontSize:12,marginBottom:14}}>Nombre y sector</div>
+            <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="NOMBRE COMPLETO" style={inp}/>
+            <select value={newSector} onChange={e=>setNewSector(e.target.value)}
+              style={{...inp,marginBottom:13}}>
+              {SECTORES.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setAddModal(false)} style={{flex:1,background:"#1e2333",color:"#6b7394",border:"1px solid #2a2f42",borderRadius:9,fontSize:14,padding:11,cursor:"pointer"}}>Cancelar</button>
+              <button onClick={agregar} style={{flex:2,background:"linear-gradient(135deg,#22c55e,#16a34a)",color:"#fff",border:"none",borderRadius:9,fontSize:14,fontWeight:600,padding:11,cursor:"pointer"}}>Agregar</button>
+            </div>
           </div>
         </div>
-      </div>}
+      )}
 
-      {toast && <div style={{position:"fixed",bottom:78,left:"50%",transform:"translateX(-50%)",background:"#22c55e",color:"#fff",fontSize:13,fontWeight:500,padding:"8px 18px",borderRadius:30,zIndex:200,whiteSpace:"nowrap"}}>{toast}</div>}
+      {toast && (
+        <div style={{position:"fixed",bottom:78,left:"50%",transform:"translateX(-50%)",background:"#22c55e",color:"#fff",fontSize:13,fontWeight:500,padding:"8px 18px",borderRadius:30,zIndex:200,whiteSpace:"nowrap"}}>
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
