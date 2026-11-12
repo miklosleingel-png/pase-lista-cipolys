@@ -35,7 +35,7 @@ const CATS = [
 ];
 const CAT_KEYS = CATS.map(c => c.k);
 
-function PieChart({counts, total}) {
+function PieChart({counts, clasif, total}) {
   const cx=55, cy=55, r=44, hole=27, sz=110;
   const sum = counts.reduce((a,b)=>a+b,0);
   if (sum===0) return (
@@ -64,7 +64,7 @@ function PieChart({counts, total}) {
     <svg width={sz} height={sz}>
       {arcs.map((s,i) => s.val>0 && <path key={i} d={arc(s.start,s.end,r,hole)} fill={s.color}/>)}
       <circle cx={cx} cy={cy} r={hole} fill="#181c27"/>
-      <text x={cx} y={cy-1} textAnchor="middle" fill="#e8ecf4" fontSize="13" fontWeight="700">{sum}</text>
+      <text x={cx} y={cy-1} textAnchor="middle" fill="#e8ecf4" fontSize="13" fontWeight="700">{clasif}</text>
       <text x={cx} y={cy+11} textAnchor="middle" fill="#6b7394" fontSize="7">de {total}</text>
     </svg>
   );
@@ -111,7 +111,7 @@ function App() {
       const data = await res.json();
       setPersonas(data.map(p => ({
         id:p.id, name:p.nombre, sector:p.sector,
-        cat: CAT_KEYS.indexOf(p.voto) !== -1 ? p.voto : null
+        cats: p.voto ? String(p.voto).split(",").filter(k => CAT_KEYS.indexOf(k) !== -1) : []
       })));
     } catch(e) {
       showToast("Sin conexión al servidor");
@@ -135,14 +135,15 @@ function App() {
     return res.json();
   };
 
-  // Seleccionar / quitar categoría
+  // Seleccionar / quitar categoría (se pueden elegir varias)
   const setCat = async (id, k) => {
     const p = personas.find(x=>x.id===id);
     if (!p) return;
-    const nueva = p.cat===k ? null : k;
-    setPersonas(prev => prev.map(x => x.id===id ? {...x, cat:nueva} : x));
+    const nuevas = p.cats.indexOf(k) !== -1 ? p.cats.filter(x => x!==k) : p.cats.concat([k]);
+    const ordenadas = CAT_KEYS.filter(x => nuevas.indexOf(x) !== -1);
+    setPersonas(prev => prev.map(x => x.id===id ? {...x, cats:ordenadas} : x));
     setSyncing(true);
-    try { await patch(id, {voto:nueva, asistencia:nueva!==null}); }
+    try { await patch(id, {voto: ordenadas.length ? ordenadas.join(",") : null, asistencia: ordenadas.length>0}); }
     catch(e) { showToast("Error al guardar"); cargarDatos(); }
     finally { setSyncing(false); }
   };
@@ -170,14 +171,14 @@ function App() {
         body:JSON.stringify({nombre:newName.trim().toUpperCase(), sector:newSector})
       });
       const nueva = await res.json();
-      setPersonas(prev => [...prev, {id:nueva.id,name:nueva.nombre,sector:nueva.sector,cat:null}]);
+      setPersonas(prev => [...prev, {id:nueva.id,name:nueva.nombre,sector:nueva.sector,cats:[]}]);
       setNewName(""); setAddModal(false); showToast("Persona agregada");
     } catch(e) { showToast("Error al agregar"); }
   };
 
   const limpiar = async () => {
     if (!window.confirm("¿Limpiar toda la lista?")) return;
-    setPersonas(prev => prev.map(p => ({...p, cat:null})));
+    setPersonas(prev => prev.map(p => ({...p, cats:[]})));
     try {
       await fetch(API_URL+"/reset", {method:"POST"});
       showToast("Lista limpiada");
@@ -191,22 +192,23 @@ function App() {
   };
 
   // Conteos
-  const countCat = (arr, k) => arr.filter(p => p.cat===k).length;
+  const countCat = (arr, k) => arr.filter(p => p.cats.indexOf(k) !== -1).length;
   const gs = {
     total: personas.length,
     cats: CATS.map(c => countCat(personas, c.k)),
-    clasif: personas.filter(p => p.cat!==null).length
+    clasif: personas.filter(p => p.cats.length>0).length
   };
 
   const sStats = SECTORES.map(sec => {
     const m = personas.filter(p => p.sector===sec);
-    return {sector:sec, total:m.length, cats:CATS.map(c => countCat(m, c.k)), clasif:m.filter(p=>p.cat!==null).length};
+    return {sector:sec, total:m.length, cats:CATS.map(c => countCat(m, c.k)), clasif:m.filter(p=>p.cats.length>0).length};
   }).filter(s => s.total>0);
 
   const filtered = personas.filter(p => p.name.toLowerCase().indexOf(query.toLowerCase()) !== -1);
   const grouped = SECTORES.map(sec => ({sector:sec, items:filtered.filter(p => p.sector===sec)})).filter(g => g.items.length>0);
 
-  const colorDe = k => { const c = CATS.find(x => x.k===k); return c ? c.col : "#2a2f42"; };
+  const colorDe = arr => { if (!arr.length) return "#2a2f42"; const c = CATS.find(x => x.k===arr[0]); return c ? c.col : "#2a2f42"; };
+  const etiquetas = arr => CATS.filter(c => arr.indexOf(c.k) !== -1).map(c => c.lbl).join(", ");
 
   const genReporte = () => {
     setModal(false);
@@ -232,21 +234,23 @@ function App() {
       + CATS.map(c => '<th style="padding:5px 8px;font-size:8pt;color:'+c.pdf+'">'+c.lbl+'</th>').join("");
 
     const catSecciones = CATS.map(c => {
-      const m = personas.filter(x => x.cat===c.k);
+      const m = personas.filter(x => x.cats.indexOf(c.k) !== -1);
       if (!m.length) return "";
       const filas = m.map((x,i) =>
         '<tr style="background:'+(i%2?"#f5f5f5":"#fff")+'"><td style="padding:4px 8px;font-size:9pt;color:#000">'+x.name+'</td>'
-        +'<td style="padding:4px 8px;font-size:9pt;color:#555">'+x.sector+'</td></tr>'
+        +'<td style="padding:4px 8px;font-size:9pt;color:#555">'+x.sector+'</td>'
+        +'<td style="padding:4px 8px;font-size:8pt;color:#555">'+etiquetas(x.cats)+'</td></tr>'
       ).join("");
       return '<div style="margin-bottom:16px">'
         +'<div style="background:'+c.pdf+';color:#fff;padding:5px 10px;font-weight:700;font-size:10pt;border-radius:4px 4px 0 0">'+c.lbl+' ('+m.length+')</div>'
         +'<table style="width:100%;border-collapse:collapse"><thead><tr style="background:#f0f0f0">'
         +'<th style="padding:4px 8px;font-size:8pt;text-align:left">Nombre</th>'
         +'<th style="padding:4px 8px;font-size:8pt;text-align:left">Sector</th>'
+        +'<th style="padding:4px 8px;font-size:8pt;text-align:left">Todas sus categorías</th>'
         +'</tr></thead><tbody>'+filas+'</tbody></table></div>';
     }).join("");
 
-    const sinClas = personas.filter(x => x.cat===null);
+    const sinClas = personas.filter(x => x.cats.length===0);
     const sinHtml = sinClas.length ? (
       '<div style="margin-bottom:16px"><div style="background:#888;color:#fff;padding:5px 10px;font-weight:700;font-size:10pt;border-radius:4px 4px 0 0">Sin clasificar ('+sinClas.length+')</div>'
       +'<table style="width:100%;border-collapse:collapse"><tbody>'
@@ -351,7 +355,7 @@ function App() {
                   <div style={{fontSize:11,color:"#6b7394"}}>({items.length})</div>
                 </div>
                 {items.map(p=>(
-                  <div key={p.id} style={{background:"#181c27",border:"1px solid #2a2f42",borderLeft:"3px solid "+colorDe(p.cat),borderRadius:10,marginBottom:6,padding:"10px 11px"}}>
+                  <div key={p.id} style={{background:"#181c27",border:"1px solid #2a2f42",borderLeft:"3px solid "+colorDe(p.cats),borderRadius:10,marginBottom:6,padding:"10px 11px"}}>
                     {/* Nombre + eliminar */}
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6,gap:8}}>
                       <div style={{fontSize:13,fontWeight:500,lineHeight:1.3,flex:1}}>{p.name}</div>
@@ -368,7 +372,7 @@ function App() {
                     {/* Botones de categoría */}
                     <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
                       {CATS.map(c=>{
-                        const active = p.cat===c.k;
+                        const active = p.cats.indexOf(c.k) !== -1;
                         return (
                           <button key={c.k} onClick={()=>setCat(p.id,c.k)}
                             style={{borderRadius:7,fontSize:12,fontWeight:500,padding:"6px 10px",lineHeight:1.1,cursor:"pointer",
@@ -401,7 +405,7 @@ function App() {
                   <div style={{marginLeft:"auto",fontSize:11,color:"#6b7394"}}>{s.clasif}/{s.total} clasificados</div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",padding:"12px 14px",gap:14}}>
-                  <PieChart counts={s.cats} total={s.total}/>
+                  <PieChart counts={s.cats} clasif={s.clasif} total={s.total}/>
                   <div style={{flex:1}}>
                     {CATS.map((c,i)=>(
                       <div key={c.k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
