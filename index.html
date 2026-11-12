@@ -85,6 +85,10 @@ function App() {
   const [newSector, setNewSector] = useState(SECTORES[0]);
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
+  const personasRef = useRef([]);      // última lista conocida (siempre actual)
+  const pendientes = useRef(0);        // guardados en curso
+  const escrituras = useRef(0);        // contador de cambios hechos en este teléfono
+  const cola = useRef(Promise.resolve()); // guardados en orden, uno tras otro
 
   // Reloj
   useEffect(() => {
@@ -107,12 +111,17 @@ function App() {
   // Cargar datos de la base de datos (valores antiguos se ignoran)
   const cargarDatos = useCallback(async () => {
     try {
+      const ver = escrituras.current;
       const res = await fetch(API_URL+"/personas");
       const data = await res.json();
-      setPersonas(data.map(p => ({
+      // Si hay cambios sin guardar (o se hizo uno mientras llegaba la respuesta), no pisar la pantalla
+      if (pendientes.current > 0 || ver !== escrituras.current) return;
+      const lista = data.map(p => ({
         id:p.id, name:p.nombre, sector:p.sector,
         cats: p.voto ? String(p.voto).split(",").filter(k => CAT_KEYS.indexOf(k) !== -1) : []
-      })));
+      }));
+      personasRef.current = lista;
+      setPersonas(lista);
     } catch(e) {
       showToast("Sin conexión al servidor");
     } finally {
@@ -126,36 +135,53 @@ function App() {
     return () => clearInterval(id);
   }, [cargarDatos]);
 
-  const patch = async (id, body) => {
-    const res = await fetch(API_URL+"/personas/"+id, {
-      method:"PATCH",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(body)
+  const aplicar = fn => {
+    const nueva = fn(personasRef.current);
+    personasRef.current = nueva;
+    setPersonas(nueva);
+  };
+
+  // Guarda en orden (cada cambio espera al anterior) y bloquea la actualización automática mientras tanto
+  const patch = (id, body) => {
+    escrituras.current++;
+    pendientes.current++;
+    setSyncing(true);
+    const tarea = cola.current.then(async () => {
+      const res = await fetch(API_URL+"/personas/"+id, {
+        method:"PATCH",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error("http "+res.status);
+      return res.json();
     });
-    return res.json();
+    cola.current = tarea.catch(()=>{});
+    return tarea.finally(() => {
+      pendientes.current--;
+      if (pendientes.current === 0) setSyncing(false);
+    });
   };
 
   // Seleccionar / quitar categoría (se pueden elegir varias)
   const setCat = async (id, k) => {
-    const p = personas.find(x=>x.id===id);
+    const p = personasRef.current.find(x=>x.id===id);
     if (!p) return;
     const nuevas = p.cats.indexOf(k) !== -1 ? p.cats.filter(x => x!==k) : p.cats.concat([k]);
     const ordenadas = CAT_KEYS.filter(x => nuevas.indexOf(x) !== -1);
-    setPersonas(prev => prev.map(x => x.id===id ? {...x, cats:ordenadas} : x));
-    setSyncing(true);
+    aplicar(prev => prev.map(x => x.id===id ? {...x, cats:ordenadas} : x));
     try { await patch(id, {voto: ordenadas.length ? ordenadas.join(",") : null, asistencia: ordenadas.length>0}); }
     catch(e) { showToast("Error al guardar"); cargarDatos(); }
-    finally { setSyncing(false); }
   };
 
   const cambiarSector = async (id, sector) => {
-    setPersonas(prev => prev.map(p => p.id===id ? {...p,sector:sector} : p));
+    aplicar(prev => prev.map(p => p.id===id ? {...p,sector:sector} : p));
     try { await patch(id, {sector:sector}); }
     catch(e) { showToast("Error al guardar"); }
   };
 
   const eliminar = async (id) => {
-    setPersonas(prev => prev.filter(p => p.id!==id));
+    escrituras.current++;
+    aplicar(prev => prev.filter(p => p.id!==id));
     try {
       await fetch(API_URL+"/personas/"+id, {method:"DELETE"});
       showToast("Eliminado");
@@ -171,14 +197,14 @@ function App() {
         body:JSON.stringify({nombre:newName.trim().toUpperCase(), sector:newSector})
       });
       const nueva = await res.json();
-      setPersonas(prev => [...prev, {id:nueva.id,name:nueva.nombre,sector:nueva.sector,cats:[]}]);
+      aplicar(prev => [...prev, {id:nueva.id,name:nueva.nombre,sector:nueva.sector,cats:[]}]);
       setNewName(""); setAddModal(false); showToast("Persona agregada");
     } catch(e) { showToast("Error al agregar"); }
   };
 
   const limpiar = async () => {
     if (!window.confirm("¿Limpiar toda la lista?")) return;
-    setPersonas(prev => prev.map(p => ({...p, cats:[]})));
+    aplicar(prev => prev.map(p => ({...p, cats:[]})));
     try {
       await fetch(API_URL+"/reset", {method:"POST"});
       showToast("Lista limpiada");
